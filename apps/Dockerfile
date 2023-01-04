@@ -13,7 +13,7 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN go build -o /docker-gs-ping
+RUN go build -o /apps
 
 # This is for documentation purposes only.
 # To actually open the port, runtime parameters
@@ -27,4 +27,4 @@ EXPOSE 8080
 #ENV HTTP_PORT=8081
 
 # Run
-CMD [ "/docker-gs-ping" ]
+CMD [ "/apps" ]
