@@ -10,13 +10,6 @@ on:
 
 env:
   GO_VERSION: 1.17
-  PROTOC_VERSION: 3.15.3
-
-  # without the following Terraform would always report changes in the
-  # notify_slack module because the deployed lambda function binary is not
-  # stored anywhere. For more details see
-  # https://github.com/terraform-aws-modules/terraform-aws-lambda#faq
-  TF_RECREATE_MISSING_LAMBDA_PACKAGE: false
 
 defaults:
   run:
