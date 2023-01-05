@@ -84,8 +84,8 @@ jobs:
       id: apply_dev
       working-directory: terraform/dev/
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_INSIDE_MIK }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_INSIDE_MIK }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
         TF_VAR_image_tag: ${{ github.sha }}
       run: |
         terraform init -no-color
