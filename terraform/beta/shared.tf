@@ -15,7 +15,6 @@ provider "aws" {
   default_tags {
     tags = {
       Origin      = "Terraform"
-      Environment = local.environment_name
     }
   }
 }
