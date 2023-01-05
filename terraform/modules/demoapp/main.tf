@@ -11,13 +11,19 @@ resource "aws_ecs_cluster" "mdesta_demotwo_cluster" {
 
 ###################################################
 
+# image_tag     = data.git_repository.solibri-cloud.commit_sha
+
+#     image              = "${var.image}:${var.image_tag}"
+
+# image = "474034724728.dkr.ecr.eu-west-1.amazonaws.com/mdesta_${var.environment_name}_app_ecr_repo"
+
 resource "aws_ecs_task_definition" "mdesta_demotwo_task" {
   family                   = "mdesta-${var.environment_name}-task" # Task Name
   container_definitions    = <<DEFINITION
   [
     {
       "name": "mdesta-${var.environment_name}-task",
-      "image": "${aws_ecr_repository.mdesta_demotwo_app_ecr_repo.repository_url}",
+      "image": "474034724728.dkr.ecr.eu-west-1.amazonaws.com/mdesta_${var.environment_name}_app_ecr_repo:${var.image_tag}",
       "essential": true,
       "portMappings": [
         {
