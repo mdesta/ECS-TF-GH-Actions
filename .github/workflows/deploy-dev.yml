@@ -47,6 +47,7 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v1
 
     - name: Build, tag, and push image to Amazon ECR
+      working-directory: apps/demoapp
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: mdesta_dev_app_ecr_repo
@@ -81,7 +82,7 @@ jobs:
 
     - name: Run Terraform for apps
       id: apply_dev
-      working-directory: terraform/apps/
+      working-directory: terraform/dev/
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_INSIDE_MIK }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_INSIDE_MIK }}
