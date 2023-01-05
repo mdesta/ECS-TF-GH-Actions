@@ -1,7 +1,7 @@
-resource "aws_ecr_repository" "mdesta_demotwo_app_ecr_repo" {
-  # name = "mdesta_demotwo_app_ecr_repo" # Repo Name in AWS
-  name = "mdesta_${var.environment_name}_app_ecr_repo" # Repo Name in AWS
-}
+# resource "aws_ecr_repository" "mdesta_demotwo_app_ecr_repo" {
+#   # name = "mdesta_demotwo_app_ecr_repo" # Repo Name in AWS
+#   name = "mdesta_${var.environment_name}_app_ecr_repo" # Repo Name in AWS
+# }
 
 ##################################################
 
