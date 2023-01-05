@@ -1,0 +1,87 @@
+name: deploy-beta
+
+# Build container images and deploy all of the components to beta environment
+
+on:
+  release:
+    types:
+    - released
+
+env:
+  GO_VERSION: 1.17
+  AWS_ACCOUNT: inside-production
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-images:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+
+    env:
+      AWS_ACCOUNT: michael-personal
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure Testing account AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
+        aws-region: eu-west-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      working-directory: apps/demoapp
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: mdesta_beta_app_ecr_repo
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+  deploy-beta:
+    runs-on: ubuntu-20.04
+    if: ${{ github.event.pull_request.merged == true }}
+    needs: build-images
+
+    env:
+      AWS_ACCOUNT: michael-personal
+
+    steps:
+    - uses: actions/checkout@v3
+   
+    - name: Configure Testing account AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
+        aws-region: eu-west-1
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v2.0.3
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+        terraform_wrapper: false
+
+    - name: Run Terraform for apps
+      id: apply_beta
+      working-directory: terraform/beta/
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
+        TF_VAR_image_tag: ${{ github.sha }}
+      run: |
+        terraform init -no-color
+        terraform apply -auto-approve -no-color -input=false -lock-timeout=300s
+        echo "::set-output name=db_host::$(terraform output -no-color -json | jq -r ".api_server.value.db_instance_address")"
