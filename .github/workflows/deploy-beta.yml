@@ -1,15 +1,17 @@
-name: deploy-dev
+name: deploy-beta
 
 # Build container images and deploy all of the components to beta environment
 
 on:
-  pull_request:
-    types: [ closed ]
-    branches:
-      - main
+  release:
+    types:
+    - released
 
 env:
   GO_VERSION: 1.17
+  AWS_ACCOUNT: inside-production
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
 
 defaults:
   run:
@@ -18,7 +20,6 @@ defaults:
 jobs:
   build-images:
     runs-on: ubuntu-20.04
-    if: ${{ github.event.pull_request.merged == true }}
     strategy:
       fail-fast: false
 
@@ -43,13 +44,13 @@ jobs:
       working-directory: apps/demoapp
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: mdesta_dev_app_ecr_repo
+        ECR_REPOSITORY: mdesta_beta_app_ecr_repo
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-  deploy-dev:
+  deploy-beta:
     runs-on: ubuntu-20.04
     if: ${{ github.event.pull_request.merged == true }}
     needs: build-images
@@ -74,8 +75,8 @@ jobs:
         terraform_wrapper: false
 
     - name: Run Terraform for apps
-      id: apply_dev
-      working-directory: terraform/dev/
+      id: apply_beta
+      working-directory: terraform/beta/
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
