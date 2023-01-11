@@ -1,15 +1,16 @@
 name: deploy-beta
 
-# Build container images and deploy all of the components to beta environment
+# Build container images and 
+# deploy all of the components to beta environment/logical-env
 
 on:
   release:
     types:
-    - released
+    - prereleased   
 
 env:
   GO_VERSION: 1.17
-  AWS_ACCOUNT: inside-production
+  AWS_ACCOUNT: michael-personal
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
 
@@ -18,6 +19,7 @@ defaults:
     shell: bash
 
 jobs:
+  # Could use ECR replication but building as new here for simplicity
   build-images:
     runs-on: ubuntu-20.04
     strategy:
@@ -40,7 +42,27 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    - name: Check if image is already built
+      id: check_image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPO_NAME: mdesta_beta_app_ecr_repo
+      run: |
+        if aws ecr describe-images --repository-name=${ECR_REPO_NAME} --image-ids=imageTag=${IMAGE_TAG}; then
+            echo "::set-output name=build_image::false"
+        else
+            echo "::set-output name=build_image::true"
+        fi
+
+    # build only if the image tag is not exist
+    # in case of terraform failures, this allows us to
+    # re-run this workflow and skip rebuilding images
+
+    # since not using ECR replication from dev, this step usually ryns but when reverting/olling-back new deployment, step wont run if image is found
+
     - name: Build, tag, and push image to Amazon ECR
+      if: steps.check_image.outputs.build_image == 'true'
       working-directory: apps/demoapp
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -83,4 +105,3 @@ jobs:
       run: |
         terraform init -no-color
         terraform apply -auto-approve -no-color -input=false -lock-timeout=300s
-        echo "::set-output name=db_host::$(terraform output -no-color -json | jq -r ".api_server.value.db_instance_address")"
