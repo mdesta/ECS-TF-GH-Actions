@@ -1,6 +1,7 @@
 name: deploy-dev
 
-# Build container images and deploy all of the components to beta environment
+# Build container images and 
+# deploy all of the components to dev environment/logical-env
 
 on:
   pull_request:
@@ -10,6 +11,9 @@ on:
 
 env:
   GO_VERSION: 1.17
+  AWS_ACCOUNT: michael-personal
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_MIK }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_MIK }}
 
 defaults:
   run:
@@ -38,6 +42,26 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Check if image is already built
+      id: check_image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPO_NAME: mdesta_dev_app_ecr_repo
+      run: |
+        if aws ecr describe-images --repository-name=${ECR_REPO_NAME} --image-ids=imageTag=${IMAGE_TAG}; then
+            echo "::set-output name=build_image::false"
+        else
+            echo "::set-output name=build_image::true"
+        fi
+
+    # build only if the image tag is not exist
+    # in case of terraform failures, this allows us to
+    # re-run this workflow and skip rebuilding images
+
+    # since not using ECR replication from dev, this step usually ryns but when reverting/olling-back new deployment, step wont run if image is found
+
 
     - name: Build, tag, and push image to Amazon ECR
       working-directory: apps/demoapp
@@ -83,4 +107,3 @@ jobs:
       run: |
         terraform init -no-color
         terraform apply -auto-approve -no-color -input=false -lock-timeout=300s
-        echo "::set-output name=db_host::$(terraform output -no-color -json | jq -r ".api_server.value.db_instance_address")"
